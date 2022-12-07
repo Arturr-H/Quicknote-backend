@@ -1,0 +1,32 @@
+version: '3.8'
+# JOIN MONGO COMMAND
+services:
+  mongo_document_manager: 
+    image: mongo:4
+    container_name: mongo_document_manager
+    environment:
+      - AUTH=yes
+      - MONGODB_ADMIN_USER=artur
+      - MONGODB_ADMIN_PASS=password
+      - MONGODB_APPLICATION_DATABASE=sample
+      - MONGODB_APPLICATION_USER=aashrey
+      - MONGODB_APPLICATION_PASS=admin123
+
+    command: mongod --port 27018
+    ports:
+      - "27018:27018"
+    volumes:
+      - ./:/usr/src/app
+      - mongodata:/data/db
+    restart: always
+
+  # rust:
+  #   build:
+  #     context: .
+  #     dockerfile: Main.Dockerfile
+
+  #   container_name: rust
+  #   ports:
+  #     - "8080:8080"
+volumes:
+  mongodata:
