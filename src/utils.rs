@@ -2,7 +2,7 @@
 use serde::{ Serialize, Deserialize };
 use serde_json;
 use responder::prelude::*;
-use reqwest::blocking::{ Client as ReqClient };
+use reqwest::blocking::Client as ReqClient;
 use mongodb::{
     bson::{ doc, Document },
     sync::{

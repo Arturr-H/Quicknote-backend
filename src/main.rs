@@ -63,7 +63,7 @@ fn get_docs(stream: &mut Stream) -> () {
     }
 
     /*- Respond with the documents -*/
-    stream.respond(200, Respond::new().headers(vec!["Access-Control-Allow-Origin: *".to_string()]));
+    stream.respond(200, Respond::new());
 }
 fn create_doc(stream: &mut Stream) -> () {
     /*- Authenticate the user -*/
@@ -91,7 +91,7 @@ fn create_doc(stream: &mut Stream) -> () {
     client.insert_one(document, None).unwrap();
 
     /*- Respond with the documents -*/
-    stream.respond(200, Respond::new().headers(vec!["Access-Control-Allow-Origin: *".to_string()]));
+    stream.respond(200, Respond::new());
 }
 fn get_doc(stream:&mut Stream) -> () {
     println!("get-doc {:?}", stream.get_cookies());
@@ -127,5 +127,5 @@ fn get_doc(stream:&mut Stream) -> () {
             Ok(e) => e,
             Err(_) => return stream.respond_status(500)
         },
-    ).headers(vec!["Access-Control-Allow-Origin: *".to_string()]));
+    ));
 }
