@@ -30,7 +30,7 @@ pub(crate) enum AuthorizationStatus{
     `AuthorizationStatus` dependent on if they are -*/
 pub(crate) fn authenticate(stream:&mut Stream) -> AuthorizationStatus {
     let cookies = stream.get_cookies();
-    println!("{cookies:?} a-{:?}", stream.headers);
+
     /*- Check if the user has a cookie -*/
     let token = match cookies.get("token") {
         Some(value) => value,
@@ -51,17 +51,14 @@ pub(crate) fn authenticate(stream:&mut Stream) -> AuthorizationStatus {
             Ok(e) => e,
             Err(_) => return AuthorizationStatus::Err,
         };
-    println!("a2");
 
     /*- Check if the user is authorized -*/
     match serde_json::from_str::<SuidResponse>(&text) {
         Ok(e) => {
-            println!("a3");
             /*- Check if the user is authorized -*/
             if e.suid == "0" {
                 return AuthorizationStatus::Unauthorized;
             } else {
-                println!("a4");
                 return AuthorizationStatus::Authorized(e.suid);
             }
         },
