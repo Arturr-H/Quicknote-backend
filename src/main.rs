@@ -169,7 +169,6 @@ fn add_doc(stream:&mut Stream) -> () {
         (None, Some(description)) => (&"Unnamed document", description),
         (None, None) => (&"Unnamed document", &"No description provided")
     };
-    println!("{title} {description}");
 
     /*- Establish mongodb client -*/
     let client = utils::establish_mclient::<Document>("documents");
@@ -190,7 +189,7 @@ fn add_doc(stream:&mut Stream) -> () {
     /*- Respond with the documents -*/
     stream.respond(200, Respond::new().json(
         match &serde_json::to_string(&doc) {
-            Ok(e) => {println!("{e}");e},
+            Ok(e) => e,
             Err(_) => return stream.respond_status(500)
         },
     ));

@@ -9,6 +9,7 @@ use serde_json;
 pub struct Document {
     pub title: String,
     pub description: String,
+    pub date: u64,
 
     /*- The document's content -*/
     pub texts: HashMap<String, Text>,
@@ -24,21 +25,24 @@ pub struct Document {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Coordinate { x: i32, y: i32 }
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Size { width: u32, height: u32, font_size:u32 }
+pub struct TextSize { width: u32, height: u32, font_size:u32 }
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Size { width: u32, height: u32 }
 
 /*- Text struct -*/
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Text {
     content: String,
     position: Coordinate,
-    size: Size
+    size: TextSize
 }
 
 /*- Note struct -*/
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Note {
-    content: String,
     position: Coordinate,
+    size: Size,
+    _real_content: Vec<u8>,
 }
 
 /*- Canvas struct -*/
