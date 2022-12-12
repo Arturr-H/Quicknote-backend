@@ -1,8 +1,8 @@
 /*- Global allowings -*/
-#![allow(
-    dead_code,
-    unused_imports
-)]
+// #![allow(
+//     dead_code,
+//     unused_imports
+// )]
 
 /*- Imports -*/
 mod utils;
@@ -11,8 +11,7 @@ use lazy_static::lazy_static;
 use responder::prelude::*;
 use dotenv::dotenv;
 use document::Document;
-use mongodb::{ self, bson::doc, };
-use serde::{self, __private::doc};
+use mongodb::{ self, bson::doc };
 use uuid;
 
 /*- Constants -*/
@@ -57,10 +56,16 @@ fn get_docs(stream: &mut Stream) -> () {
 
     /*- Get the user's documents -*/
     let mut docs:Vec<Document> = Vec::new();
-    for doc in client.find(doc! {
+    for doc in match client.find(doc! {
         "owner": &suid
-    }, None).unwrap() {
-        docs.push(doc.unwrap());
+    }, None) {
+        Ok(e) => e,
+        Err(_) => return stream.respond_status(500)
+    } {
+        docs.push(match doc {
+            Ok(e) => e,
+            Err(_) => return stream.respond_status(500)
+        });
     };
 
     /*- Respond with the documents -*/
@@ -89,7 +94,7 @@ fn set_doc(stream:&mut Stream) -> () {
         None => return stream.respond_status(400)
     }) {
         Ok(e) => e,
-        Err(e) => panic!("{e}")
+        Err(_) => return stream.respond_status(400)
     };
     document.owner = suid.clone();
 
@@ -108,7 +113,10 @@ fn set_doc(stream:&mut Stream) -> () {
         };
     }else {
         /*- Insert the document -*/
-        client.insert_one(&document, None).unwrap();
+        match client.insert_one(&document, None) {
+            Ok(_) => (),
+            Err(_) => return stream.respond_status(500)
+        };
     }
 
     /*- Respond with the documents -*/
@@ -184,7 +192,10 @@ fn add_doc(stream:&mut Stream) -> () {
         description: description.to_string(),
         ..Default::default()
     };
-    client.insert_one(doc, None).unwrap();
+    match client.insert_one(doc, None) {
+        Ok(_) => (),
+        Err(_) => return stream.respond_status(500)
+    };
 
     /*- Respond with the documents -*/
     stream.respond(200, Respond::new().json(

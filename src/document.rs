@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 /*- Imports -*/
 use serde::{ Serialize, Deserialize };
-use serde_json;
 
 /*- Main doc strcut -*/
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]

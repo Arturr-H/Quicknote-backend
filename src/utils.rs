@@ -3,16 +3,13 @@ use serde::{ Serialize, Deserialize };
 use serde_json;
 use responder::prelude::*;
 use reqwest::blocking::Client as ReqClient;
-use mongodb::{
-    bson::{ doc, Document },
-    sync::{
-        Client,
-        Collection,
-        Database, Cursor
-    },
+use mongodb::sync::{
+    Client,
+    Collection,
+    Database
 };
 
-use crate::{JWT_SECRET_KEY, MONGO_CLIENT_URI_STRING, ACCOUNT_API_URL};
+use crate::{ MONGO_CLIENT_URI_STRING, ACCOUNT_API_URL };
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct SuidResponse {
