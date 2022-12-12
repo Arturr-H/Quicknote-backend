@@ -32,7 +32,7 @@ pub struct Size { width: u32, height: u32 }
 /*- Text struct -*/
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Text {
-    content: String,
+    _real_content: Vec<u8>,
     position: Coordinate,
     size: TextSize
 }
