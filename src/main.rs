@@ -38,6 +38,8 @@ fn main() -> () {
         .address("127.0.0.1")
         .port(8080)
         .routes(routes)
+        .init_buf_size(1024 /*- 1kb -*/ * 1024 /*- 1mb -*/ * 10 /*- 10mb -*/)
+        .threads(10)
         .start().unwrap()
 }
 
