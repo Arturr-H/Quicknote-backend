@@ -14,6 +14,7 @@ use dotenv::dotenv;
 use document::Document;
 use mongodb::{ self, bson::doc };
 use uuid;
+use std::{ fs, io::Write };
 
 /*- Constants -*/
 lazy_static! {
@@ -29,10 +30,10 @@ fn main() -> () {
     /*- Create enpoint routes -*/
     let routes = &[
         Route::Get("get-documents", get_docs),
-        Route::Get("set-doc", set_doc),
-        Route::Get("get-doc", get_doc),
-        Route::Get("add-doc", add_doc),
-        Route::Post("save-canvas", save_canvas),
+        Route::Get("set-doc",       set_doc),
+        Route::Get("get-doc",       get_doc),
+        Route::Get("add-doc",       add_doc),
+        Route::Post("save-canvas",  save_canvas),
     ];
 
     /*- Start the server -*/
@@ -42,6 +43,7 @@ fn main() -> () {
         .routes(routes)
         .init_buf_size(1024 /*- 1kb -*/ * 1024 /*- 1mb -*/ * 10 /*- 10mb -*/)
         .threads(10)
+        .serve("./canvases/")
         .start().unwrap()
 }
 
@@ -222,40 +224,30 @@ fn save_canvas(stream:&mut Stream) -> () {
     let client = utils::establish_mclient::<Document>("documents");
 
     /*- Get the user's document id -*/
-    let id:&str = match stream.headers.get("id") {
+    let doc_id:&str = match stream.headers.get("doc-id") {
+        Some(e) => e,
+        None => return stream.respond_status(400)
+    };
+    let canvas_id:&str = match stream.headers.get("canvas-id") {
         Some(e) => e,
         None => return stream.respond_status(400)
     };
 
     /*- Get the canvas -*/
     let canvas = &stream.body;
-    println!("{}", canvas);
-    // /*- Get the document -*/
-    // let mut doc = match match client.find_one(doc! { "owner": suid, "id": id }, None) {
-    //     Ok(e) => e,
-    //     Err(_) => return stream.respond_status(404)
-    // } {
-    //     Some(e) => e,
-    //     None => return stream.respond_status(404)
-    // };
 
-    // /*- Update the document -*/
-    // doc.canvas = canvas.to_string();
-    // match client.replace_one(doc! {
-    //     "owner": suid,
-    //     "id": id
-    // }, &doc, None) {
-    //     Ok(_) => (),
-    //     Err(_) => return stream.respond_status(500)
-    // };
+    /*- Write canvas to file -*/
+    let strpath = format!("canvases/{doc_id}-{canvas_id}");
+    let mut file = match std::fs::File::create(strpath) {
+        Ok(file) => file,
+        Err(_) => return stream.respond_status(500)
+    };
+    let bytes_written = match file.write_all(canvas.as_bytes()) {
+        Ok(_) => (),
+        Err(_) => return stream.respond_status(500)
+    };
 
-    // /*- Respond with the documents -*/
-    // stream.respond(200, Respond::new().json(
-    //     match &serde_json::to_string(&doc) {
-    //         Ok(e) => e,
-    //         Err(_) => return stream.respond_status(500)
-    //     },
-    // ));
+    stream.respond_status(200);
 }
 
 
