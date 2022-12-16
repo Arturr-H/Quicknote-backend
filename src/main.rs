@@ -1,8 +1,9 @@
 /*- Global allowings -*/
-// #![allow(
-//     dead_code,
-//     unused_imports
-// )]
+#![allow(
+    dead_code,
+    unused_imports,
+    unused_variables
+)]
 
 /*- Imports -*/
 mod utils;
@@ -31,6 +32,7 @@ fn main() -> () {
         Route::Get("set-doc", set_doc),
         Route::Get("get-doc", get_doc),
         Route::Get("add-doc", add_doc),
+        Route::Post("save-canvas", save_canvas),
     ];
 
     /*- Start the server -*/
@@ -66,7 +68,7 @@ fn get_docs(stream: &mut Stream) -> () {
     } {
         docs.push(match doc {
             Ok(e) => e,
-            Err(_) => return stream.respond_status(500)
+            Err(_) => continue
         });
     };
 
@@ -207,3 +209,53 @@ fn add_doc(stream:&mut Stream) -> () {
         },
     ));
 }
+fn save_canvas(stream:&mut Stream) -> () {
+    /*- Authenticate the user -*/
+    let suid = match utils::authenticate(stream) {
+        utils::AuthorizationStatus::Authorized(suid) => suid,
+        _ => {
+            return stream.respond_status(401);
+        }
+    };
+
+    /*- Establish mongodb client -*/
+    let client = utils::establish_mclient::<Document>("documents");
+
+    /*- Get the user's document id -*/
+    let id:&str = match stream.headers.get("id") {
+        Some(e) => e,
+        None => return stream.respond_status(400)
+    };
+
+    /*- Get the canvas -*/
+    let canvas = &stream.body;
+    println!("{}", canvas);
+    // /*- Get the document -*/
+    // let mut doc = match match client.find_one(doc! { "owner": suid, "id": id }, None) {
+    //     Ok(e) => e,
+    //     Err(_) => return stream.respond_status(404)
+    // } {
+    //     Some(e) => e,
+    //     None => return stream.respond_status(404)
+    // };
+
+    // /*- Update the document -*/
+    // doc.canvas = canvas.to_string();
+    // match client.replace_one(doc! {
+    //     "owner": suid,
+    //     "id": id
+    // }, &doc, None) {
+    //     Ok(_) => (),
+    //     Err(_) => return stream.respond_status(500)
+    // };
+
+    // /*- Respond with the documents -*/
+    // stream.respond(200, Respond::new().json(
+    //     match &serde_json::to_string(&doc) {
+    //         Ok(e) => e,
+    //         Err(_) => return stream.respond_status(500)
+    //     },
+    // ));
+}
+
+
