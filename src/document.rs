@@ -47,7 +47,7 @@ pub struct Note {
 /*- Canvas struct -*/
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Canvas {
-    position: Coordinate,
-    id: String,
+    pub position: Coordinate,
+    pub id: String,
 }
 

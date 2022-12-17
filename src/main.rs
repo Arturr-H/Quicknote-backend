@@ -33,13 +33,14 @@ fn main() -> () {
         Route::Get("set-doc",       set_doc),
         Route::Get("get-doc",       get_doc),
         Route::Get("add-doc",       add_doc),
+        Route::Get("delete-doc",    delete_doc),
         Route::Post("save-canvas",  save_canvas),
     ];
 
     /*- Start the server -*/
     Server::new()
-        .address("127.0.0.1")
-        .port(8080)
+        .address("0.0.0.0")
+        .port(8081)
         .routes(routes)
         .init_buf_size(1024 /*- 1kb -*/ * 1024 /*- 1mb -*/ * 10 /*- 10mb -*/)
         .threads(10)
@@ -97,10 +98,10 @@ fn set_doc(stream:&mut Stream) -> () {
     /*- Get the user's doc -*/
     let mut document:Document = match serde_json::from_str(match stream.headers.get("document") {
         Some(e) => e,
-        None => return stream.respond_status(400)
+        None => panic!("a")
     }) {
         Ok(e) => e,
-        Err(_) => return stream.respond_status(400)
+        Err(e) => panic!("{e}")
     };
     document.owner = suid.clone();
 
@@ -166,6 +167,53 @@ fn get_doc(stream:&mut Stream) -> () {
             Err(_) => return stream.respond_status(500)
         },
     ));
+}
+fn delete_doc(stream:&mut Stream) -> () {
+    /*- Authenticate the user -*/
+    let suid = match utils::authenticate(stream) {
+        utils::AuthorizationStatus::Authorized(suid) => suid,
+        _ => {
+            return stream.respond_status(401);
+        }
+    };
+
+    /*- Establish mongodb client -*/
+    let client = utils::establish_mclient::<Document>("documents");
+
+    /*- Get the user's document id -*/
+    let id:&str = match stream.headers.get("id") {
+        Some(e) => e,
+        None => return stream.respond_status(400)
+    };
+
+    /*- Get the document -*/
+    let doc = match match client.find_one(doc! { "owner": &suid, "id": id }, None) {
+        Ok(e) => e,
+        Err(_) => return stream.respond_status(404)
+    } {
+        Some(e) => e,
+        None => return stream.respond_status(404)
+    };
+
+    /*- Delete all canvases coupled to this doc -*/
+    for canvas in &doc.canvases {
+        let path = format!("canvases/{}-{}", id, canvas.1.id);
+
+        /*- Delete the canvas file -*/
+        std::fs::remove_file(path).ok();
+    }
+
+    /*- Delete the document -*/
+    match client.delete_one(doc! {
+        "owner": &suid,
+        "id": id
+    }, None) {
+        Ok(_) => (),
+        Err(_) => return stream.respond_status(500)
+    };
+
+    /*- Respond with the documents -*/
+    stream.respond_status(200);
 }
 fn add_doc(stream:&mut Stream) -> () {
     /*- Authenticate the user -*/
@@ -238,13 +286,15 @@ fn save_canvas(stream:&mut Stream) -> () {
 
     /*- Write canvas to file -*/
     let strpath = format!("canvases/{doc_id}-{canvas_id}");
-    let mut file = match std::fs::File::create(strpath) {
-        Ok(file) => file,
-        Err(_) => return stream.respond_status(500)
-    };
-    let bytes_written = match file.write_all(canvas.as_bytes()) {
-        Ok(_) => (),
-        Err(_) => return stream.respond_status(500)
+    if canvas.len() != 0 {
+        let mut file = match std::fs::File::create(strpath) {
+            Ok(file) => file,
+            Err(_) => return stream.respond_status(500)
+        };
+        let bytes_written = match file.write_all(canvas.as_bytes()) {
+            Ok(_) => (),
+            Err(_) => return stream.respond_status(500)
+        };
     };
 
     stream.respond_status(200);
