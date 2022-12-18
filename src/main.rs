@@ -35,6 +35,7 @@ fn main() -> () {
         Route::Get("add-doc",       add_doc),
         Route::Get("delete-doc",    delete_doc),
         Route::Post("save-canvas",  save_canvas),
+        Route::Post("save-note",    save_note),
     ];
 
     /*- Start the server -*/
@@ -44,7 +45,7 @@ fn main() -> () {
         .routes(routes)
         .init_buf_size(1024 /*- 1kb -*/ * 1024 /*- 1mb -*/ * 10 /*- 10mb -*/)
         .threads(10)
-        .serve("./canvases/")
+        .serve("./uploads/")
         .start().unwrap()
 }
 
@@ -285,13 +286,53 @@ fn save_canvas(stream:&mut Stream) -> () {
     let canvas = &stream.body;
 
     /*- Write canvas to file -*/
-    let strpath = format!("canvases/{doc_id}-{canvas_id}");
+    let strpath = format!("uploads/canvases/{doc_id}-{canvas_id}");
     if canvas.len() != 0 {
         let mut file = match std::fs::File::create(strpath) {
             Ok(file) => file,
             Err(_) => return stream.respond_status(500)
         };
         let bytes_written = match file.write_all(canvas.as_bytes()) {
+            Ok(_) => (),
+            Err(_) => return stream.respond_status(500)
+        };
+    };
+
+    stream.respond_status(200);
+}
+fn save_note(stream:&mut Stream) -> () {
+    /*- Authenticate the user -*/
+    let suid = match utils::authenticate(stream) {
+        utils::AuthorizationStatus::Authorized(suid) => suid,
+        _ => {
+            return stream.respond_status(401);
+        }
+    };
+
+    /*- Establish mongodb client -*/
+    let client = utils::establish_mclient::<Document>("documents");
+
+    /*- Get the user's document id -*/
+    let doc_id:&str = match stream.headers.get("doc-id") {
+        Some(e) => e,
+        None => return stream.respond_status(400)
+    };
+    let note_id:&str = match stream.headers.get("note-id") {
+        Some(e) => e,
+        None => return stream.respond_status(400)
+    };
+
+    /*- Get the note -*/
+    let note = &stream.body;
+
+    /*- Write note to file -*/
+    let strpath = format!("uploads/notes/{doc_id}-{note_id}");
+    if note.len() != 0 {
+        let mut file = match std::fs::File::create(strpath) {
+            Ok(file) => file,
+            Err(e) => panic!("{e}")
+        };
+        let bytes_written = match file.write_all(note.as_bytes()) {
             Ok(_) => (),
             Err(_) => return stream.respond_status(500)
         };

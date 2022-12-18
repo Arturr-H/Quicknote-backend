@@ -41,7 +41,7 @@ pub struct Text {
 pub struct Note {
     position: Coordinate,
     size: Size,
-    _real_content: Vec<u8>,
+    id: String,
 }
 
 /*- Canvas struct -*/
