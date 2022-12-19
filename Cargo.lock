@@ -1387,9 +1387,9 @@ dependencies = [
 
 [[package]]
 name = "responder"
-version = "0.1.983"
+version = "0.1.985"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "035c682604af3737ad627e7c3b52158eae4053fdd6c1b93af3d53d214440f0de"
+checksum = "5b3dff7cf7bbb516ca56e13db2a81e40c4dacd94b30a2ebdfdef624ef8d0e3fe"
 dependencies = [
  "ansi_term",
  "lazy_static",

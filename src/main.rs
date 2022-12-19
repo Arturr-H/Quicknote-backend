@@ -13,6 +13,7 @@ use responder::prelude::*;
 use dotenv::dotenv;
 use document::Document;
 use mongodb::{ self, bson::doc };
+use serde_json::json;
 use uuid;
 use std::{ fs, io::Write };
 
@@ -55,7 +56,7 @@ fn get_docs(stream: &mut Stream) -> () {
     let suid = match utils::authenticate(stream) {
         utils::AuthorizationStatus::Authorized(suid) => suid,
         _ => {
-            return stream.respond_status(401);
+            return stream.payload_status(401);
         }
     };
 
@@ -68,7 +69,7 @@ fn get_docs(stream: &mut Stream) -> () {
         "owner": &suid
     }, None) {
         Ok(e) => e,
-        Err(_) => return stream.respond_status(500)
+        Err(_) => return stream.payload(500)
     } {
         docs.push(match doc {
             Ok(e) => e,
@@ -80,7 +81,7 @@ fn get_docs(stream: &mut Stream) -> () {
     stream.respond(200, Respond::new().json(
         match &serde_json::to_string(&docs) {
             Ok(e) => e,
-            Err(_) => return stream.respond_status(500)
+            Err(_) => return stream.payload(500)
         }
     ));
 }
@@ -89,7 +90,7 @@ fn set_doc(stream:&mut Stream) -> () {
     let suid = match utils::authenticate(stream) {
         utils::AuthorizationStatus::Authorized(suid) => suid,
         _ => {
-            return stream.respond_status(401);
+            return stream.payload_status(401);
         }
     };
 
@@ -117,13 +118,13 @@ fn set_doc(stream:&mut Stream) -> () {
             "id": &document.id
         }, &document, None) {
             Ok(_) => (),
-            Err(_) => return stream.respond_status(500)
+            Err(_) => return stream.payload(500)
         };
     }else {
         /*- Insert the document -*/
         match client.insert_one(&document, None) {
             Ok(_) => (),
-            Err(_) => return stream.respond_status(500)
+            Err(_) => return stream.payload(500)
         };
     }
 
@@ -139,7 +140,7 @@ fn get_doc(stream:&mut Stream) -> () {
     let suid = match utils::authenticate(stream) {
         utils::AuthorizationStatus::Authorized(suid) => suid,
         _ => {
-            return stream.respond_status(401);
+            return stream.payload_status(401);
         }
     };
 
@@ -149,23 +150,23 @@ fn get_doc(stream:&mut Stream) -> () {
     /*- Get the user's document id -*/
     let id:&str = match stream.headers.get("id") {
         Some(e) => e,
-        None => return stream.respond_status(400)
+        None => return stream.payload(400)
     };
 
     /*- Get the document -*/
     let doc = match match client.find_one(doc! { "owner": suid, "id": id }, None) {
         Ok(e) => e,
-        Err(_) => return stream.respond_status(404)
+        Err(_) => return stream.payload(404)
     } {
         Some(e) => e,
-        None => return stream.respond_status(404)
+        None => return stream.payload(404)
     };
 
     /*- Respond with the documents -*/
     stream.respond(200, Respond::new().json(
         match &serde_json::to_string(&doc) {
             Ok(e) => e,
-            Err(_) => return stream.respond_status(500)
+            Err(_) => return stream.payload(500)
         },
     ));
 }
@@ -174,7 +175,7 @@ fn delete_doc(stream:&mut Stream) -> () {
     let suid = match utils::authenticate(stream) {
         utils::AuthorizationStatus::Authorized(suid) => suid,
         _ => {
-            return stream.respond_status(401);
+            return stream.payload_status(401);
         }
     };
 
@@ -184,21 +185,21 @@ fn delete_doc(stream:&mut Stream) -> () {
     /*- Get the user's document id -*/
     let id:&str = match stream.headers.get("id") {
         Some(e) => e,
-        None => return stream.respond_status(400)
+        None => return stream.payload(400)
     };
 
     /*- Get the document -*/
     let doc = match match client.find_one(doc! { "owner": &suid, "id": id }, None) {
         Ok(e) => e,
-        Err(_) => return stream.respond_status(404)
+        Err(_) => return stream.payload(404)
     } {
         Some(e) => e,
-        None => return stream.respond_status(404)
+        None => return stream.payload(404)
     };
 
     /*- Delete all canvases coupled to this doc -*/
     for canvas in &doc.canvases {
-        let path = format!("canvases/{}-{}", id, canvas.1.id);
+        let path = format!("uploads/canvases/{}-{}", id, canvas.1.id);
 
         /*- Delete the canvas file -*/
         std::fs::remove_file(path).ok();
@@ -210,18 +211,18 @@ fn delete_doc(stream:&mut Stream) -> () {
         "id": id
     }, None) {
         Ok(_) => (),
-        Err(_) => return stream.respond_status(500)
+        Err(_) => return stream.payload(500)
     };
 
     /*- Respond with the documents -*/
-    stream.respond_status(200);
+    stream.payload(200);
 }
 fn add_doc(stream:&mut Stream) -> () {
     /*- Authenticate the user -*/
     let suid = match utils::authenticate(stream) {
         utils::AuthorizationStatus::Authorized(suid) => suid,
         _ => {
-            return stream.respond_status(401);
+            return stream.payload_status(401);
         }
     };
 
@@ -249,14 +250,14 @@ fn add_doc(stream:&mut Stream) -> () {
     };
     match client.insert_one(doc, None) {
         Ok(_) => (),
-        Err(_) => return stream.respond_status(500)
+        Err(_) => return stream.payload(500)
     };
 
     /*- Respond with the documents -*/
     stream.respond(200, Respond::new().json(
         match &serde_json::to_string(&doc) {
             Ok(e) => e,
-            Err(_) => return stream.respond_status(500)
+            Err(_) => return stream.payload(500)
         },
     ));
 }
@@ -265,7 +266,7 @@ fn save_canvas(stream:&mut Stream) -> () {
     let suid = match utils::authenticate(stream) {
         utils::AuthorizationStatus::Authorized(suid) => suid,
         _ => {
-            return stream.respond_status(401);
+            return stream.payload_status(401);
         }
     };
 
@@ -275,11 +276,11 @@ fn save_canvas(stream:&mut Stream) -> () {
     /*- Get the user's document id -*/
     let doc_id:&str = match stream.headers.get("doc-id") {
         Some(e) => e,
-        None => return stream.respond_status(400)
+        None => return stream.payload_status(400)
     };
     let canvas_id:&str = match stream.headers.get("canvas-id") {
         Some(e) => e,
-        None => return stream.respond_status(400)
+        None => return stream.payload_status(400)
     };
 
     /*- Get the canvas -*/
@@ -290,22 +291,22 @@ fn save_canvas(stream:&mut Stream) -> () {
     if canvas.len() != 0 {
         let mut file = match std::fs::File::create(strpath) {
             Ok(file) => file,
-            Err(_) => return stream.respond_status(500)
+            Err(_) => return stream.payload_status(500)
         };
         let bytes_written = match file.write_all(canvas.as_bytes()) {
             Ok(_) => (),
-            Err(_) => return stream.respond_status(500)
+            Err(_) => return stream.payload_status(500)
         };
     };
 
-    stream.respond_status(200);
+    stream.payload_status(200);
 }
 fn save_note(stream:&mut Stream) -> () {
     /*- Authenticate the user -*/
     let suid = match utils::authenticate(stream) {
         utils::AuthorizationStatus::Authorized(suid) => suid,
         _ => {
-            return stream.respond_status(401);
+            return stream.payload_status(400);
         }
     };
 
@@ -315,11 +316,11 @@ fn save_note(stream:&mut Stream) -> () {
     /*- Get the user's document id -*/
     let doc_id:&str = match stream.headers.get("doc-id") {
         Some(e) => e,
-        None => return stream.respond_status(400)
+        None => return stream.payload_status(400)
     };
     let note_id:&str = match stream.headers.get("note-id") {
         Some(e) => e,
-        None => return stream.respond_status(400)
+        None => return stream.payload_status(400)
     };
 
     /*- Get the note -*/
@@ -330,15 +331,14 @@ fn save_note(stream:&mut Stream) -> () {
     if note.len() != 0 {
         let mut file = match std::fs::File::create(strpath) {
             Ok(file) => file,
-            Err(e) => panic!("{e}")
+            Err(e) => return stream.payload_status(500)
         };
         let bytes_written = match file.write_all(note.as_bytes()) {
             Ok(_) => (),
-            Err(_) => return stream.respond_status(500)
+            Err(_) => return stream.payload_status(500)
         };
     };
 
-    stream.respond_status(200);
+    stream.payload_status(200);
 }
-
 
